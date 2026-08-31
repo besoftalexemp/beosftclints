@@ -12,6 +12,10 @@
     selectedGovernorate: '',
     searchTerm: '',
     visibleCount: PAGE_SIZE,
+    mapZoom: 1,
+    mapPanX: 0,
+    mapPanY: 0,
+    mapGestureMoved: false,
   };
 
   const governorates = [
@@ -140,6 +144,8 @@
     selectedText: document.getElementById('selectedGovernorateText'),
 
     topList: document.getElementById('topGovernoratesList'),
+    egyptMap: document.getElementById('egyptMap'),
+    mapPanLayer: document.getElementById('mapPanLayer'),
     mapMarkers: document.getElementById('mapMarkers'),
     mapFocus: document.getElementById('mapFocus'),
     mobileMapList: document.getElementById('mobileMapList'),
@@ -160,6 +166,11 @@
     loadMore: document.getElementById('loadMoreBtn'),
 
   };
+
+  const activeMapPointers = new Map();
+
+  let lastMapPanPoint = null;
+  let lastPinchDistance = 0;
 
   function cleanText(value) {
     if (value === null || value === undefined) return '';
@@ -437,6 +448,353 @@
       : 'اختر محافظة من الخريطة أو القائمة';
   }
 
+  function clampMapPan(x, y, zoom = state.mapZoom) {
+    if (!els.egyptMap || zoom <= 1) {
+      return { x: 0, y: 0 };
+    }
+
+    const rect =
+      els.egyptMap.getBoundingClientRect();
+
+    const minX =
+      rect.width - (rect.width * zoom);
+    const minY =
+      rect.height - (rect.height * zoom);
+
+    return {
+      x: Math.min(0, Math.max(minX, x)),
+      y: Math.min(0, Math.max(minY, y)),
+    };
+  }
+
+  function applyMapTransform() {
+    if (!els.egyptMap) {
+      return;
+    }
+
+    const pan =
+      clampMapPan(
+        state.mapPanX,
+        state.mapPanY,
+        state.mapZoom
+      );
+
+    state.mapPanX = pan.x;
+    state.mapPanY = pan.y;
+
+    els.egyptMap.style.setProperty(
+      '--map-zoom',
+      state.mapZoom
+    );
+
+    els.egyptMap.style.setProperty(
+      '--map-pan-x',
+      `${state.mapPanX}px`
+    );
+
+    els.egyptMap.style.setProperty(
+      '--map-pan-y',
+      `${state.mapPanY}px`
+    );
+
+    els.egyptMap.classList.toggle(
+      'is-zoomed',
+      state.mapZoom > 1.12
+    );
+  }
+
+  function setMapZoom(value, focalPoint = null) {
+    const oldZoom =
+      state.mapZoom;
+
+    const nextZoom =
+      Math.min(
+        2.8,
+        Math.max(1, value)
+      );
+
+    if (!els.egyptMap) {
+      state.mapZoom =
+        Number(nextZoom.toFixed(2));
+      return;
+    }
+
+    const rect =
+      els.egyptMap.getBoundingClientRect();
+
+    const focal =
+      focalPoint || {
+        clientX: rect.left + (rect.width / 2),
+        clientY: rect.top + (rect.height / 2),
+      };
+
+    const localX =
+      focal.clientX - rect.left;
+    const localY =
+      focal.clientY - rect.top;
+
+    const worldX =
+      (localX - state.mapPanX) / oldZoom;
+    const worldY =
+      (localY - state.mapPanY) / oldZoom;
+
+    state.mapZoom =
+      Number(nextZoom.toFixed(2));
+
+    const pan =
+      clampMapPan(
+        localX - (worldX * state.mapZoom),
+        localY - (worldY * state.mapZoom),
+        state.mapZoom
+      );
+
+    state.mapPanX = pan.x;
+    state.mapPanY = pan.y;
+
+    applyMapTransform();
+  }
+
+  function panMapBy(deltaX, deltaY) {
+    const pan =
+      clampMapPan(
+        state.mapPanX + deltaX,
+        state.mapPanY + deltaY
+      );
+
+    state.mapPanX = pan.x;
+    state.mapPanY = pan.y;
+
+    applyMapTransform();
+  }
+
+  function getPointerDistance(points) {
+    const [first, second] = points;
+    const dx =
+      first.clientX - second.clientX;
+    const dy =
+      first.clientY - second.clientY;
+
+    return Math.hypot(dx, dy);
+  }
+
+  function getPointerMidpoint(points) {
+    const [first, second] = points;
+
+    return {
+      clientX:
+        (first.clientX + second.clientX) / 2,
+      clientY:
+        (first.clientY + second.clientY) / 2,
+    };
+  }
+
+  function getActiveMapPointers() {
+    return [...activeMapPointers.values()];
+  }
+
+  function initMapGestures() {
+    if (!els.egyptMap) {
+      return;
+    }
+
+    els.egyptMap.addEventListener(
+      'pointerdown',
+      (event) => {
+        activeMapPointers.set(
+          event.pointerId,
+          {
+            clientX: event.clientX,
+            clientY: event.clientY,
+          }
+        );
+
+        els.egyptMap.setPointerCapture(
+          event.pointerId
+        );
+
+        const points =
+          getActiveMapPointers();
+
+        state.mapGestureMoved = false;
+        els.egyptMap.classList.add('is-dragging');
+
+        if (points.length === 1) {
+          lastMapPanPoint = points[0];
+        }
+
+        if (points.length >= 2) {
+          lastPinchDistance =
+            getPointerDistance(
+              points.slice(0, 2)
+            );
+        }
+
+        event.preventDefault();
+      }
+    );
+
+    els.egyptMap.addEventListener(
+      'pointermove',
+      (event) => {
+        if (
+          !activeMapPointers.has(
+            event.pointerId
+          )
+        ) {
+          return;
+        }
+
+        activeMapPointers.set(
+          event.pointerId,
+          {
+            clientX: event.clientX,
+            clientY: event.clientY,
+          }
+        );
+
+        const points =
+          getActiveMapPointers();
+
+        if (points.length >= 2) {
+          const pinchPoints =
+            points.slice(0, 2);
+          const distance =
+            getPointerDistance(
+              pinchPoints
+            );
+          const midpoint =
+            getPointerMidpoint(
+              pinchPoints
+            );
+
+          if (lastPinchDistance) {
+            setMapZoom(
+              state.mapZoom *
+                (distance / lastPinchDistance),
+              midpoint
+            );
+          }
+
+          lastPinchDistance = distance;
+          state.mapGestureMoved = true;
+          event.preventDefault();
+          return;
+        }
+
+        if (
+          points.length === 1 &&
+          lastMapPanPoint
+        ) {
+          const point = points[0];
+          const deltaX =
+            point.clientX -
+            lastMapPanPoint.clientX;
+          const deltaY =
+            point.clientY -
+            lastMapPanPoint.clientY;
+
+          if (
+            Math.abs(deltaX) > 1 ||
+            Math.abs(deltaY) > 1
+          ) {
+            panMapBy(deltaX, deltaY);
+
+            if (
+              Math.hypot(deltaX, deltaY) > 5
+            ) {
+              state.mapGestureMoved = true;
+            }
+          }
+
+          lastMapPanPoint = point;
+          event.preventDefault();
+        }
+      }
+    );
+
+    const endPointer = (event) => {
+      activeMapPointers.delete(
+        event.pointerId
+      );
+
+      try {
+        els.egyptMap.releasePointerCapture(
+          event.pointerId
+        );
+      } catch (error) {
+        // Pointer capture may already be released by the browser.
+      }
+
+      const points =
+        getActiveMapPointers();
+
+      if (points.length === 1) {
+        lastMapPanPoint = points[0];
+      } else {
+        lastMapPanPoint = null;
+        lastPinchDistance = 0;
+      }
+
+      if (!points.length) {
+        els.egyptMap.classList.remove(
+          'is-dragging'
+        );
+
+        if (state.mapGestureMoved) {
+          window.setTimeout(
+            () => {
+              state.mapGestureMoved = false;
+            },
+            180
+          );
+        }
+      }
+    };
+
+    els.egyptMap.addEventListener(
+      'pointerup',
+      endPointer
+    );
+    els.egyptMap.addEventListener(
+      'pointercancel',
+      endPointer
+    );
+    els.egyptMap.addEventListener(
+      'lostpointercapture',
+      endPointer
+    );
+
+    els.egyptMap.addEventListener(
+      'wheel',
+      (event) => {
+        event.preventDefault();
+
+        const factor =
+          event.deltaY < 0 ? 1.12 : 0.88;
+
+        setMapZoom(
+          state.mapZoom * factor,
+          event
+        );
+      },
+      { passive: false }
+    );
+
+    els.egyptMap.addEventListener(
+      'dblclick',
+      (event) => {
+        event.preventDefault();
+
+        setMapZoom(
+          state.mapZoom >= 2.2
+            ? 1
+            : state.mapZoom + 0.45,
+          event
+        );
+      }
+    );
+  }
+
   function renderStats() {
     if (els.totalCustomers) {
       els.totalCustomers.textContent =
@@ -621,7 +979,13 @@
       .forEach((marker) => {
         marker.addEventListener(
           'click',
-          () => {
+          (event) => {
+            if (state.mapGestureMoved) {
+              event.preventDefault();
+              state.mapGestureMoved = false;
+              return;
+            }
+
             selectGovernorate(
               marker.dataset.gov
             );
@@ -1183,6 +1547,8 @@
   }
 
   initReveal();
+  initMapGestures();
+  applyMapTransform();
 
   loadExcelFromServer()
     .then(finishLoading)
