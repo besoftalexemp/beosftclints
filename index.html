@@ -106,9 +106,19 @@
             <p>متابعة المبيعات، الأصناف، المخزون، ورديات التشغيل بصورة منظمة وسريعة.</p>
           </article>
           <article class="sector-focus" data-reveal>
+            <span>نقاط بيع سريعة</span>
+            <h3>المطاعم والكافيهات</h3>
+            <p>إدارة الطلبات، المبيعات اليومية، الخامات، وحسابات التشغيل بطريقة مناسبة للسرعة والضغط.</p>
+          </article>
+          <article class="sector-focus" data-reveal>
             <span>إدارة مخزون</span>
             <h3>المخازن وقطع الغيار</h3>
             <p>تصنيف المنتجات، مراقبة الكميات، وتنظيم حركة الصرف والإضافة والتحويلات.</p>
+          </article>
+          <article class="sector-focus" data-reveal>
+            <span>تصنيع وتكاليف</span>
+            <h3>المصانع</h3>
+            <p>متابعة المواد الخام، المنتجات، المخزون، والتكاليف الأساسية بما يناسب دورة العمل.</p>
           </article>
         </div>
 
@@ -118,6 +128,8 @@
           <span>الميني ماركت</span>
           <span>المواد الغذائية</span>
           <span>المطاعم والكافيهات</span>
+          <span>المصانع</span>
+          <span>ورش الإنتاج</span>
           <span>المخابز والحلويات</span>
           <span>الملابس والأحذية</span>
           <span>الإكسسوارات والهدايا</span>
@@ -177,19 +189,22 @@
           <div class="egypt-card" data-reveal>
             <div class="map-status" id="mapFocus">يتم تحميل بيانات الخريطة...</div>
             <div class="egypt-map" id="egyptMap">
-              <svg viewBox="0 0 420 620" class="egypt-silhouette" aria-hidden="true">
-                <defs>
-                  <linearGradient id="egyptGradient" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0" stop-color="#173b89"/>
-                    <stop offset="0.55" stop-color="#2c5ebc"/>
-                    <stop offset="1" stop-color="#13a38b"/>
-                  </linearGradient>
-                </defs>
-                <path class="main-land" d="M118 40 L298 42 L322 86 L312 126 L332 168 L322 208 L348 250 L326 303 L320 360 L340 420 L323 476 L350 548 L250 575 L194 520 L170 444 L144 378 L134 318 L108 260 L98 198 L102 138 Z" />
-                <path class="sinai-land" d="M298 42 L380 96 L348 250 L322 208 L332 168 L312 126 L322 86 Z" />
-                <path class="nile-line" d="M241 77 C228 132 226 184 236 235 C248 294 228 333 207 381 C183 438 186 486 213 535" />
-              </svg>
-              <div id="mapMarkers" class="map-markers"></div>
+              <div class="map-pan-layer" id="mapPanLayer">
+                <svg viewBox="0 0 420 620" class="egypt-silhouette" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="egyptGradient" x1="0" x2="1" y1="0" y2="1">
+                      <stop offset="0" stop-color="#173b89"/>
+                      <stop offset="0.55" stop-color="#2c5ebc"/>
+                      <stop offset="1" stop-color="#13a38b"/>
+                    </linearGradient>
+                  </defs>
+                  <path class="main-land" d="M118 40 L298 42 L322 86 L312 126 L332 168 L322 208 L348 250 L326 303 L320 360 L340 420 L323 476 L350 548 L250 575 L194 520 L170 444 L144 378 L134 318 L108 260 L98 198 L102 138 Z" />
+                  <path class="sinai-land" d="M298 42 L380 96 L348 250 L322 208 L332 168 L312 126 L322 86 Z" />
+                  <path class="nile-line" d="M241 77 C228 132 226 184 236 235 C248 294 228 333 207 381 C183 438 186 486 213 535" />
+                </svg>
+                <div id="mapMarkers" class="map-markers"></div>
+              </div>
+              <div class="map-gesture-hint">حرّك الخريطة واسحب بإصبعين للتكبير</div>
             </div>
             <div class="mobile-map-list" id="mobileMapList" aria-label="قائمة المحافظات"></div>
           </div>
@@ -218,7 +233,6 @@
 
         <div class="results-meta">
           <span id="resultsCount">جاري تحميل البيانات...</span>
-          <span class="data-source">المصدر: customers.xlsx</span>
         </div>
 
         <div id="loadingState" class="loading-state">
