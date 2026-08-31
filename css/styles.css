@@ -282,6 +282,7 @@ button { cursor: pointer; }
 }
 .sector-showcase {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -404,13 +405,30 @@ button { cursor: pointer; }
 .egypt-map {
   position: relative;
   width: 100%;
-  height: clamp(410px, 112vw, 590px);
+  height: clamp(520px, 132vw, 740px);
   overflow: hidden;
   border-radius: 20px;
   background:
     linear-gradient(0deg, rgba(19,163,139,.08), transparent 38%),
     #f9fbff;
   border: 1px solid #e8edf6;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.egypt-map.is-dragging {
+  cursor: grabbing;
+}
+.map-pan-layer {
+  position: absolute;
+  inset: 0;
+  transform: translate(var(--map-pan-x, 0px), var(--map-pan-y, 0px)) scale(var(--map-zoom, 1));
+  transform-origin: 0 0;
+  transition: transform .12s ease-out;
+  will-change: transform;
+}
+.egypt-map.is-dragging .map-pan-layer {
+  transition: none;
 }
 .egypt-silhouette {
   width: 82%;
@@ -438,7 +456,10 @@ button { cursor: pointer; }
   stroke-linecap: round;
   stroke-dasharray: 10 12;
 }
-.map-markers { position: absolute; inset: 0; }
+.map-markers {
+  position: absolute;
+  inset: 0;
+}
 .map-marker {
   --pin-scale: 1;
   --pin-strength: .18;
@@ -523,7 +544,33 @@ button { cursor: pointer; }
   opacity: .45;
   box-shadow: none;
 }
-.map-marker.zero .pin-label { display: none; }
+.map-marker:not(.has-data):not(.active) .pin-label { display: none; }
+.egypt-map.is-zoomed .map-marker .pin-label {
+  display: grid;
+}
+.map-marker.zero .pin-label {
+  opacity: .85;
+}
+.map-gesture-hint {
+  position: absolute;
+  right: 12px;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid rgba(227,233,243,.86);
+  border-radius: 999px;
+  color: var(--primary);
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 12px 24px rgba(20,27,45,.08);
+  font-size: .76rem;
+  font-weight: 800;
+  pointer-events: none;
+}
 @keyframes pulse {
   to { transform: scale(1.35); opacity: 0; }
 }
@@ -961,7 +1008,7 @@ button { cursor: pointer; }
   }
   .customers-grid { grid-template-columns: repeat(2, 1fr); }
   .contact-cards { grid-template-columns: repeat(2, 1fr); }
-  .sector-showcase { grid-template-columns: repeat(3, 1fr); }
+  .sector-showcase { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 820px) {
@@ -990,7 +1037,12 @@ button { cursor: pointer; }
   }
   .coverage-panel { padding: 28px; order: 0; }
   .egypt-card { padding: 18px; }
-  .egypt-map { height: 650px; }
+  .sector-showcase { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sector-focus {
+    min-height: 210px;
+    padding: 18px;
+  }
+  .egypt-map { height: 780px; }
   .mobile-map-list { display: none; }
   .filter-bar {
     top: 12px;
@@ -1009,6 +1061,10 @@ button { cursor: pointer; }
   }
   .footer-brand { justify-self: start; }
   .bottom-dock { display: none; }
+}
+
+@media (min-width: 1100px) {
+  .sector-showcase { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
 @media (max-width: 380px) {
